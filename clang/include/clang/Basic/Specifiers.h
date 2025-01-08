@@ -300,6 +300,7 @@ namespace clang {
     CC_M68kRTD,           // __attribute__((m68k_rtd))
     CC_PreserveNone,      // __attribute__((preserve_none))
     CC_RISCVVectorCall,   // __attribute__((riscv_vector_cc))
+    CC_AArch64CustomReg,  // __attribute__((aarch64_custom_reg))
   };
 
   /// Checks whether the given calling convention supports variadic

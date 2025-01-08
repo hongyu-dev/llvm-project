@@ -4854,3 +4854,10 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Documentation = [ClspvLibclcBuiltinDoc];
   let SimpleHandler = 1;
 }
+
+def AArch64CustomReg : Attr {
+  let Spellings = [Clang<"aarch64_custom_reg">];
+  let Args = [StringArgument<"RegisterMapping">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [DocTextNode<"Specifies custom register mappings for AArch64">];
+}
