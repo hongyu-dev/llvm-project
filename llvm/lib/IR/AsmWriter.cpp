@@ -368,6 +368,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::RISCV_VectorCall:
     Out << "riscv_vector_cc";
     break;
+  case CallingConv::AArch64_Custom_Reg:
+    Out << "aarch64_custom_reg";
+    break;
   }
 }
 
