@@ -78,6 +78,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     // clang-format off
   case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
     // clang-format on
+  case CC_AArch64CustomReg:
+    return llvm::CallingConv::AArch64_Custom_Reg;
   }
 }
 

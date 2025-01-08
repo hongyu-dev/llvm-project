@@ -271,7 +271,7 @@ namespace CallingConv {
     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 = 111,
 
     // Customized calling convention based on attribute argument for AArch64
-    AArch64_Custom_CC = 112,
+    AArch64_Custom_Reg = 112,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023

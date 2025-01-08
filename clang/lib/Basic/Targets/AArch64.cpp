@@ -1259,6 +1259,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_Win64:
+  case CC_AArch64CustomReg:
     return CCCR_OK;
   default:
     return CCCR_Warning;
