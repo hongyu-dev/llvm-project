@@ -1754,6 +1754,13 @@ def FastCall : DeclOrTypeAttr {
   let Documentation = [FastCallDocs];
 }
 
+def AArch64CustomReg : DeclOrTypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [Clang<"aarch64_custom_reg">];
+  let Args = [StringArgument<"RegisterMapping">];
+  let Documentation = [Undocumented];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+}
+
 def RegCall : DeclOrTypeAttr {
   let Spellings = [GCC<"regcall">, CustomKeyword<"__regcall">];
   let Documentation = [RegCallDocs];
@@ -4853,11 +4860,4 @@ def ClspvLibclcBuiltin: InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ClspvLibclcBuiltinDoc];
   let SimpleHandler = 1;
-}
-
-def AArch64CustomReg : Attr {
-  let Spellings = [Clang<"aarch64_custom_reg">];
-  let Args = [StringArgument<"RegisterMapping">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [DocTextNode<"Specifies custom register mappings for AArch64">];
 }

@@ -771,3 +771,13 @@ def CSR_AArch64_SVE_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_SVE_AAPCS, X18)>;
 def CSR_AArch64_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;
+
+def CC_AARCH64_CustomReg : CallingConv<[
+  CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegHandler">>,
+  CCIfType<[i64], CCAssignToStack<8, 8>>
+  
+]>;
+
+def RetCC_AArch64_CustomReg : CallingConv<[
+  CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegRetHandler">>
+]>;

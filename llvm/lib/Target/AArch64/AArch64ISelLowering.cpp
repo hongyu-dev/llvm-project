@@ -18,6 +18,7 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
@@ -57,6 +58,7 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
@@ -75,6 +77,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -7571,6 +7574,90 @@ bool AArch64TargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
   return true;
 }
 
+static bool parseAArch64Register(StringRef RegStr, unsigned &RegNum) {
+  if (!RegStr.starts_with("x"))
+    return false;
+  if (RegStr.substr(1).getAsInteger(10, RegNum))
+    return false;
+  RegNum = AArch64::X0 + RegNum;
+  return RegNum <= AArch64::X28;
+}
+
+static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
+                                 SmallVectorImpl<unsigned> &ArgRegs) {
+  auto Parts = Mapping.split(':');
+  if (Parts.first.empty() || Parts.second.empty())
+    return false;
+
+  if (!parseAArch64Register(Parts.first.trim(), RetReg))
+    return false;
+
+  SmallVector<StringRef, 4> ArgStrs;
+  Parts.second.split(ArgStrs, ',');
+
+  for (auto ArgStr : ArgStrs) {
+    unsigned ArgReg;
+    if (!parseAArch64Register(ArgStr.trim(), ArgReg))
+      return false;
+    ArgRegs.push_back(ArgReg);
+  }
+  return true;
+}
+
+static bool AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                     CCValAssign::LocInfo LocInfo,
+                                     ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  MachineFunction &MF = State.getMachineFunction();
+  Function &F = MF.getFunction();
+
+  const auto Attr = F.getFnAttribute("aarch64_custom_reg");
+  if (!Attr.isStringAttribute())
+    return false;
+  StringRef Mapping = Attr.getValueAsString();
+  SmallVector<unsigned, 4> ArgRegs;
+  unsigned RetReg;
+
+  if (parseRegisterMapping(Mapping, RetReg, ArgRegs)) {
+    SmallVector<MCPhysReg, 4> PhysRegs;
+    for (unsigned RegNo : ArgRegs) {
+      unsigned PReg = AArch64::X0 + RegNo;
+      PhysRegs.push_back(PReg);
+    }
+
+    for (unsigned i = 0; i < PhysRegs.size(); ++i) {
+      State.AllocateReg(PhysRegs[i]);
+      State.addLoc(
+          CCValAssign::getCustomReg(i, ValVT, PhysRegs[i], LocVT, LocInfo));
+    }
+    return true;
+  }
+
+  return false;
+}
+
+static bool AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                        CCValAssign::LocInfo LocInfo,
+                                        ISD::ArgFlagsTy ArgFlags,
+                                        CCState &State) {
+  MachineFunction &MF = State.getMachineFunction();
+  Function &F = MF.getFunction();
+
+  const auto Attr = F.getFnAttribute("aarch64_custom_reg");
+  if (!Attr.isStringAttribute())
+    return false;
+  StringRef Mapping = Attr.getValueAsString();
+  SmallVector<unsigned, 4> ArgRegs;
+
+  unsigned RetReg;
+  if (parseRegisterMapping(Mapping, RetReg, ArgRegs)) {
+    unsigned PReg = AArch64::X0 + RetReg;
+    State.AllocateReg(PReg);
+    State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, PReg, LocVT, LocInfo));
+    return true;
+  }
+  return false;
+}
+
 /// Selects the correct CCAssignFn for a given CallingConvention value.
 CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                      bool IsVarArg) const {
@@ -7630,6 +7717,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     return CC_AArch64_Arm64EC_Thunk;
   case CallingConv::ARM64EC_Thunk_Native:
     return CC_AArch64_Arm64EC_Thunk_Native;
+  case CallingConv::AArch64_Custom_Reg:
+    return AArch64_CustomRegHandler;
   }
 }
 
@@ -7644,6 +7733,8 @@ AArch64TargetLowering::CCAssignFnForReturn(CallingConv::ID CC) const {
     if (Subtarget->isWindowsArm64EC())
       return RetCC_AArch64_Arm64EC_CFGuard_Check;
     return RetCC_AArch64_AAPCS;
+  case CallingConv::AArch64_Custom_Reg:
+    return AArch64_CustomRegRetHandler;
   }
 }
 
