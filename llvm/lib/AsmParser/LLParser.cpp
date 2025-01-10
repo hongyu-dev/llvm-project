@@ -2208,6 +2208,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'cc' UINT
 ///
 bool LLParser::parseOptionalCallingConv(unsigned &CC) {
+  llvm::errs() << "CC = " << CC << "\n";
   switch (Lex.getKind()) {
   default:                       CC = CallingConv::C; return false;
   case lltok::kw_ccc:            CC = CallingConv::C; break;
@@ -2279,6 +2280,7 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
   case lltok::kw_graalcc:        CC = CallingConv::GRAAL; break;
   case lltok::kw_aarch64_custom_reg:
+    llvm::outs() << "AArch64_Custom_Reg\n";
     CC = CallingConv::AArch64_Custom_Reg;
     break;
   case lltok::kw_riscv_vector_cc:

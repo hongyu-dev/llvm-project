@@ -4770,6 +4770,46 @@ static void handleGNUInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) GNUInlineAttr(S.Context, AL));
 }
 
+static void handleAArch64CustomRegAttr(Sema &S, Decl *D,
+                                       const ParsedAttr &Attr) {
+  auto *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << Attr << Attr.isRegularKeywordAttribute() << ExpectedFunction;
+    return;
+  }
+
+  // Get the register mapping string
+  StringRef RegMapping;
+  if (!S.checkStringLiteralArgumentAttr(Attr, 0, RegMapping))
+    return;
+
+  // Add the attribute
+  D->addAttr(::new (S.Context)
+                 AArch64CustomRegAttr(S.Context, Attr, RegMapping));
+
+  // Get the current function type
+  QualType QT = FD->getType();
+  const FunctionType *FT = QT->getAs<FunctionType>();
+  if (!FT)
+    return;
+
+  // Create new function type with the custom calling convention
+  QualType Adjusted;
+  if (const auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_AArch64CustomReg);
+    Adjusted = S.Context.getFunctionType(FPT->getReturnType(),
+                                         FPT->getParamTypes(), EPI);
+  } else {
+    FunctionType::ExtInfo EI =
+        FT->getExtInfo().withCallingConv(CC_AArch64CustomReg);
+    Adjusted = S.Context.getFunctionNoProtoType(FT->getReturnType(), EI);
+  }
+
+  FD->setType(Adjusted);
+}
+
 static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (hasDeclarator(D)) return;
 
@@ -5070,6 +5110,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_RISCVVectorCC:
     CC = CC_RISCVVectorCall;
+    break;
+  case ParsedAttr::AT_AArch64CustomReg:
+    CC = CC_AArch64CustomReg;
     break;
   default: llvm_unreachable("unexpected attribute kind");
   }
@@ -6910,6 +6953,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PreserveNone:
   case ParsedAttr::AT_RISCVVectorCC:
     handleCallConvAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_AArch64CustomReg:
+    handleAArch64CustomRegAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:
     handleSuppressAttr(S, D, AL);

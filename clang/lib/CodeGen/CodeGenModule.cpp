@@ -29,6 +29,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -2461,6 +2462,10 @@ CodeGenModule::getMostBaseClasses(const CXXRecordDecl *RD) {
 void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
                                                            llvm::Function *F) {
   llvm::AttrBuilder B(F->getContext());
+
+  if (const auto *A = D->getAttr<AArch64CustomRegAttr>()) {
+    F->addFnAttr("aarch64-custom-reg-map", A->getRegisterMapping());
+  }
 
   if ((!D || !D->hasAttr<NoUwtableAttr>()) && CodeGenOpts.UnwindTables)
     B.addUWTableAttr(llvm::UWTableKind(CodeGenOpts.UnwindTables));

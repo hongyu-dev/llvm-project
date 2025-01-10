@@ -1754,11 +1754,13 @@ def FastCall : DeclOrTypeAttr {
   let Documentation = [FastCallDocs];
 }
 
-def AArch64CustomReg : DeclOrTypeAttr, TargetSpecificAttr<TargetAArch64> {
-  let Spellings = [Clang<"aarch64_custom_reg">];
+def AArch64CustomReg : DeclOrTypeAttr {
+  let Spellings = [
+    Clang<"aarch64_custom_reg">  // Use Clang spelling for C-style attributes
+  ];
   let Args = [StringArgument<"RegisterMapping">];
-  let Documentation = [Undocumented];
   let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [Undocumented];
 }
 
 def RegCall : DeclOrTypeAttr {
