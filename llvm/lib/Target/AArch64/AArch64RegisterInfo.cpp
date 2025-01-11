@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -37,6 +38,36 @@ using namespace llvm;
 #include "AArch64GenCallingConv.inc"
 #define GET_REGINFO_TARGET_DESC
 #include "AArch64GenRegisterInfo.inc"
+
+static bool parseAArch64Register(StringRef RegStr, unsigned &RegNum) {
+  if (!RegStr.starts_with_insensitive("x"))
+    return false;
+  if (RegStr.substr(1).getAsInteger(10, RegNum))
+    return false;
+  RegNum = AArch64::X0 + RegNum;
+  return RegNum <= AArch64::X28;
+}
+
+static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
+                                 SmallVectorImpl<unsigned> &ArgRegs) {
+  auto Parts = Mapping.split(':');
+  if (Parts.first.empty() || Parts.second.empty())
+    return false;
+
+  if (!parseAArch64Register(Parts.first.trim(), RetReg))
+    return false;
+
+  SmallVector<StringRef, 4> ArgStrs;
+  Parts.second.split(ArgStrs, ',');
+
+  for (auto ArgStr : ArgStrs) {
+    unsigned ArgReg;
+    if (!parseAArch64Register(ArgStr.trim(), ArgReg))
+      return false;
+    ArgRegs.push_back(ArgReg);
+  }
+  return true;
+}
 
 AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
     : AArch64GenRegisterInfo(AArch64::LR), TT(TT) {
@@ -69,6 +100,57 @@ bool AArch64RegisterInfo::regNeedsCFI(unsigned Reg,
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
+
+  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_Custom_Reg) {
+    const auto Attr =
+        MF->getFunction().getFnAttribute("aarch64-custom-reg-map");
+    StringRef Mapping = Attr.getValueAsString();
+    SmallVector<unsigned, 4> ArgRegs;
+    unsigned RetReg;
+    if (parseRegisterMapping(Mapping, RetReg, ArgRegs)) {
+      switch (RetReg) {
+      case AArch64::X0:
+        return CSR_AArch64_Custom_X0_SCS_SaveList;
+      case AArch64::X1:
+        return CSR_AArch64_Custom_X1_SCS_SaveList;
+      case AArch64::X2:
+        return CSR_AArch64_Custom_X2_SCS_SaveList;
+      case AArch64::X3:
+        return CSR_AArch64_Custom_X3_SCS_SaveList;
+      case AArch64::X4:
+        return CSR_AArch64_Custom_X4_SCS_SaveList;
+      case AArch64::X5:
+        return CSR_AArch64_Custom_X5_SCS_SaveList;
+      case AArch64::X9:
+        return CSR_AArch64_Custom_X9_SCS_SaveList;
+      case AArch64::X10:
+        return CSR_AArch64_Custom_X10_SCS_SaveList;
+      case AArch64::X11:
+        return CSR_AArch64_Custom_X11_SCS_SaveList;
+      case AArch64::X19:
+        return CSR_AArch64_Custom_X19_SCS_SaveList;
+      case AArch64::X20:
+        return CSR_AArch64_Custom_X20_SCS_SaveList;
+      case AArch64::X21:
+        return CSR_AArch64_Custom_X21_SCS_SaveList;
+      case AArch64::X22:
+        return CSR_AArch64_Custom_X22_SCS_SaveList;
+      case AArch64::X23:
+        return CSR_AArch64_Custom_X23_SCS_SaveList;
+      case AArch64::X24:
+        return CSR_AArch64_Custom_X24_SCS_SaveList;
+      case AArch64::X25:
+        return CSR_AArch64_Custom_X25_SCS_SaveList;
+      case AArch64::X27:
+        return CSR_AArch64_Custom_X27_SCS_SaveList;
+      case AArch64::X28:
+        return CSR_AArch64_Custom_X28_SCS_SaveList;
+      default:
+        return CSR_AArch64_NoRegs_SaveList;
+      }
+    }
+    return CSR_AArch64_NoRegs_SaveList;
+  }
 
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     // GHC set of callee saved regs is empty as all those regs are

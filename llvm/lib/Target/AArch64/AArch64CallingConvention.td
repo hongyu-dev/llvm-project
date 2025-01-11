@@ -781,3 +781,40 @@ def CC_AARCH64_CustomReg : CallingConv<[
 def RetCC_AArch64_CustomReg : CallingConv<[
   CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegRetHandler">>
 ]>;
+
+def CSR_AArch64_Custom_X0_SCS
+  : CalleeSavedRegs<(add X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X1_SCS
+  : CalleeSavedRegs<(add X0, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X2_SCS
+  : CalleeSavedRegs<(add X0, X1, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X3_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X4_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X5_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X9_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X10_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X11, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X11_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X19_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X20, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X20_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X21, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X21_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X22, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X22_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X23, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X23_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X24, X25, X27, X28)>;
+def CSR_AArch64_Custom_X24_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X25, X27, X28)>;
+def CSR_AArch64_Custom_X25_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X27, X28)>;
+def CSR_AArch64_Custom_X27_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X28)>;
+def CSR_AArch64_Custom_X28_SCS
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X19, X20, X21, X22, X23, X24, X25, X27)>;
