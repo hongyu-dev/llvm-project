@@ -15,6 +15,7 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
@@ -265,11 +266,21 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
     return true;
+  // Track which registers we've seen
+  SmallSet<unsigned, 4> UsedRegs;
 
   for (unsigned i = 0; i < ArgRegs.size(); i++) {
-    if (MCRegister Reg = State.AllocateReg(ArgRegs[i])) {
-      State.addLoc(CCValAssign::getReg(i, ValVT, Reg, LocVT, LocInfo));
+    // Only allocate if we haven't seen this register before
+    if (!UsedRegs.count(ArgRegs[i])) {
+      if (MCRegister Reg = State.AllocateReg(ArgRegs[i])) {
+        UsedRegs.insert(ArgRegs[i]);
+      } else {
+        return true; // Allocation failed
+      }
     }
+
+    // Always add location mapping, even for repeated registers
+    State.addLoc(CCValAssign::getReg(i, ValVT, ArgRegs[i], LocVT, LocInfo));
   }
   return false;
 }
