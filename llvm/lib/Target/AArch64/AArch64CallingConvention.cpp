@@ -222,12 +222,17 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 }
 
 static bool parseAArch64Register(StringRef RegStr, unsigned &RegNum) {
-  if (!RegStr.starts_with_insensitive("x"))
-    return false;
   if (RegStr.substr(1).getAsInteger(10, RegNum))
     return false;
-  RegNum = AArch64::X0 + RegNum;
-  return RegNum <= AArch64::X28;
+  if (RegStr.starts_with_insensitive("x")) {
+    RegNum = AArch64::X0 + RegNum;
+    return RegNum <= AArch64::X28;
+  }
+  if (RegStr.starts_with_insensitive("v")) {
+    RegNum = AArch64::V0 + RegNum;
+    return RegNum <= AArch64::V31;
+  }
+  return false;
 }
 
 static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
@@ -289,6 +294,62 @@ bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
                                           CCValAssign::LocInfo LocInfo,
                                           ISD::ArgFlagsTy ArgFlags,
                                           CCState &State) {
+  MachineFunction &MF = State.getMachineFunction();
+  Function &F = MF.getFunction();
+  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
+  if (!Attr.isValid())
+    return true;
+  StringRef Mapping = Attr.getValueAsString();
+  SmallVector<unsigned, 4> ArgRegs;
+  unsigned RetReg;
+
+  if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
+    return true;
+
+  if (MCRegister Reg = State.AllocateReg(RetReg)) {
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    return false;
+  }
+  return true;
+}
+
+bool llvm::CC_AArch64_CustomVRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                        CCValAssign::LocInfo LocInfo,
+                                        ISD::ArgFlagsTy ArgFlags,
+                                        CCState &State) {
+  MachineFunction &MF = State.getMachineFunction();
+  Function &F = MF.getFunction();
+  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
+  if (!Attr.isValid())
+    return true;
+  StringRef Mapping = Attr.getValueAsString();
+  SmallVector<unsigned, 4> ArgRegs;
+  unsigned RetReg;
+
+  if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
+    return true;
+  // Track which registers we've seen
+  SmallSet<unsigned, 4> UsedRegs;
+
+  for (unsigned i = 0; i < ArgRegs.size(); i++) {
+    // Only allocate if we haven't seen this register before
+    if (!UsedRegs.count(ArgRegs[i])) {
+      if (MCRegister Reg = State.AllocateReg(ArgRegs[i])) {
+        UsedRegs.insert(ArgRegs[i]);
+      } else {
+        return true; // Allocation failed
+      }
+    }
+
+    // Always add location mapping, even for repeated registers
+    State.addLoc(CCValAssign::getReg(i, ValVT, ArgRegs[i], LocVT, LocInfo));
+  }
+  return false;
+}
+bool llvm::CC_AArch64_CustomVRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                           CCValAssign::LocInfo LocInfo,
+                                           ISD::ArgFlagsTy ArgFlags,
+                                           CCState &State) {
   MachineFunction &MF = State.getMachineFunction();
   Function &F = MF.getFunction();
   const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");

@@ -774,12 +774,15 @@ def CSR_AArch64_AAPCS_SCS
 
 def CC_AARCH64_CustomReg : CallingConv<[
   CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegHandler">>,
-  CCIfType<[i64], CCAssignToStack<8, 8>>
+  CCIfType<[i64], CCAssignToStack<8, 8>>,
   
+  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegHandler">>,
+  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCAssignToStack<16, 16>>
 ]>;
 
 def RetCC_AArch64_CustomReg : CallingConv<[
-  CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegRetHandler">>
+  CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegRetHandler">>,
+  CCIftype<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegRetHandler">>
 ]>;
 
 def CSR_AArch64_Custom_X0_SCS
@@ -818,3 +821,36 @@ def CSR_AArch64_Custom_X27_SCS
   : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X28)>;
 def CSR_AArch64_Custom_X28_SCS
   : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27)>;
+
+def CSR_AArch64_Custom_V0_SCS
+: CalleeSavedRegs<(add V1, V2, V3, V4, V5, V6, V7, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V1_SCS
+: CalleeSavedRegs<(add V0, V2, V3, V4, V5, V6, V7, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V2_SCS
+: CalleeSavedRegs<(add V0, V1, V3, V4, V5, V6, V7, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V3_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V4, V5, V6, V7, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V4_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V5, V6, V7, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V5_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V6, V7, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V6_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V7, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V7_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V16, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V16_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V17, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V17_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V16, V18, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V18_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V16, V17, V19, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V19_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V16, V17, V18, V20, V21, V22, V23)>;
+def CSR_AArch64_Custom_V20_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V16, V17, V18, V19, V21, V22, V23)>;
+def CSR_AArch64_Custom_V21_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V16, V17, V18, V19, V20, V22, V23)>;
+def CSR_AArch64_Custom_V22_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V16, V17, V18, V19, V20, V21, V23)>;
+def CSR_AArch64_Custom_V23_SCS
+: CalleeSavedRegs<(add V0, V1, V2, V3, V4, V5, V6, V7, V16, V17, V18, V19, V20, V21, V22)>;
