@@ -40,12 +40,17 @@ using namespace llvm;
 #include "AArch64GenRegisterInfo.inc"
 
 static bool parseAArch64Register(StringRef RegStr, unsigned &RegNum) {
-  if (!RegStr.starts_with_insensitive("x"))
-    return false;
   if (RegStr.substr(1).getAsInteger(10, RegNum))
     return false;
-  RegNum = AArch64::X0 + RegNum;
-  return RegNum <= AArch64::X28;
+  if (RegStr.starts_with_insensitive("x")) {
+    RegNum = AArch64::X0 + RegNum;
+    return RegNum <= AArch64::X28;
+  }
+  if (RegStr.starts_with_insensitive("q")) {
+    RegNum = AArch64::Q0 + RegNum;
+    return RegNum <= AArch64::Q31;
+  }
+  return false;
 }
 
 static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
@@ -145,6 +150,38 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         return CSR_AArch64_Custom_X27_SCS_SaveList;
       case AArch64::X28:
         return CSR_AArch64_Custom_X28_SCS_SaveList;
+      case AArch64::Q0:
+        return CSR_AArch64_Custom_Q0_SCS_SaveList;
+      case AArch64::Q1:
+        return CSR_AArch64_Custom_Q1_SCS_SaveList;
+      case AArch64::Q2:
+        return CSR_AArch64_Custom_Q2_SCS_SaveList;
+      case AArch64::Q3:
+        return CSR_AArch64_Custom_Q3_SCS_SaveList;
+      case AArch64::Q4:
+        return CSR_AArch64_Custom_Q4_SCS_SaveList;
+      case AArch64::Q5:
+        return CSR_AArch64_Custom_Q5_SCS_SaveList;
+      case AArch64::Q6:
+        return CSR_AArch64_Custom_Q6_SCS_SaveList;
+      case AArch64::Q7:
+        return CSR_AArch64_Custom_Q7_SCS_SaveList;
+      case AArch64::Q16:
+        return CSR_AArch64_Custom_Q16_SCS_SaveList;
+      case AArch64::Q17:
+        return CSR_AArch64_Custom_Q17_SCS_SaveList;
+      case AArch64::Q18:
+        return CSR_AArch64_Custom_Q18_SCS_SaveList;
+      case AArch64::Q19:
+        return CSR_AArch64_Custom_Q19_SCS_SaveList;
+      case AArch64::Q20:
+        return CSR_AArch64_Custom_Q20_SCS_SaveList;
+      case AArch64::Q21:
+        return CSR_AArch64_Custom_Q21_SCS_SaveList;
+      case AArch64::Q22:
+        return CSR_AArch64_Custom_Q22_SCS_SaveList;
+      case AArch64::Q23:
+        return CSR_AArch64_Custom_Q23_SCS_SaveList;
       default:
         return CSR_AArch64_NoRegs_SaveList;
       }

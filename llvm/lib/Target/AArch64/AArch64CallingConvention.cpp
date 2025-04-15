@@ -228,9 +228,9 @@ static bool parseAArch64Register(StringRef RegStr, unsigned &RegNum) {
     RegNum = AArch64::X0 + RegNum;
     return RegNum <= AArch64::X28;
   }
-  if (RegStr.starts_with_insensitive("v")) {
-    RegNum = AArch64::V0 + RegNum;
-    return RegNum <= AArch64::V31;
+  if (RegStr.starts_with_insensitive("q")) {
+    RegNum = AArch64::Q0 + RegNum;
+    return RegNum <= AArch64::Q31;
   }
   return false;
 }
