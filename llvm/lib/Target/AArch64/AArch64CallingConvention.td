@@ -776,13 +776,13 @@ def CC_AARCH64_CustomReg : CallingConv<[
   CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegHandler">>,
   CCIfType<[i64], CCAssignToStack<8, 8>>,
   
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegHandler">>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCAssignToStack<16, 16>>
+  CCIfType<[i128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegHandler">>,
+  CCIfType<[i128,v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCAssignToStack<16, 16>>
 ]>;
 
 def RetCC_AArch64_CustomReg : CallingConv<[
   CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegRetHandler">>,
-  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegRetHandler">>
+  CCIfType<[i128,v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegRetHandler">>
 ]>;
 
 def CSR_AArch64_Custom_X0_SCS
