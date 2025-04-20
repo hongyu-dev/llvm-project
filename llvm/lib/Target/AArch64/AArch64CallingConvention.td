@@ -772,85 +772,95 @@ def CSR_AArch64_SVE_AAPCS_SCS
 def CSR_AArch64_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;
 
+// Handle 64-bit integers in X registers
+// Handle 128-bit vectors in Q registers
+// Stack fallbacks if custom handler doesn't assign a register
 def CC_AARCH64_CustomReg : CallingConv<[
   CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegHandler">>,
-  CCIfType<[i64], CCAssignToStack<8, 8>>,
   
-  CCIfType<[i128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegHandler">>,
-  CCIfType<[i128,v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCAssignToStack<16, 16>>
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16, v8bf16], 
+           CCCustom<"CC_AArch64_CustomRegHandler">>,
+  
+  CCIfType<[i64], CCAssignToStack<8, 8>>,
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16, v8bf16], 
+           CCAssignToStack<16, 16>>
 ]>;
 
+// Handle 64-bit integer returns in X registers
+// Handle 128-bit vector returns in Q registers
 def RetCC_AArch64_CustomReg : CallingConv<[
   CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegRetHandler">>,
-  CCIfType<[i128,v2i64, v4i32, v8i16, v16i8, v4f32, v2f64,v8f16, v8bf16], CCCustom<"CC_AArch64_CustomVRegRetHandler">>
+  
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16, v8bf16], 
+           CCCustom<"CC_AArch64_CustomRegRetHandler">>
 ]>;
 
 def CSR_AArch64_Custom_X0_SCS
-  : CalleeSavedRegs<(add X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X1_SCS
-  : CalleeSavedRegs<(add X0, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X2_SCS
-  : CalleeSavedRegs<(add X0, X1, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X3_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X4_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X5_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X9_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X10_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X11_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X19_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X20, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X20, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X20_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X21, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X21, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X21_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X22, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X22, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X22_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X23, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X23, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X23_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X24, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X24, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X24_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X25, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X25, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X25_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X27, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X27, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X27_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X28)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X28, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 def CSR_AArch64_Custom_X28_SCS
-  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27)>;
+  : CalleeSavedRegs<(add X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
 
 def CSR_AArch64_Custom_Q0_SCS
-: CalleeSavedRegs<(add Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q1_SCS
-: CalleeSavedRegs<(add Q0, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q2_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q3_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q4_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q5_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q6_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q7_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q16, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q16_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q17, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q17, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q17_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q18, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q18, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q18_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q19, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q19, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q19_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q20, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q20, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q20_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q21, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q21, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q21_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q22, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q22, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q22_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q23)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q23, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;
 def CSR_AArch64_Custom_Q23_SCS
-: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22)>;
+: CalleeSavedRegs<(add Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q16, Q17, Q18, Q19, Q20, Q21, Q22, X0, X1, X2, X3, X4, X5, X9, X10, X11, X15, X19, X20, X21, X22, X23, X24, X25, X27, X28)>;

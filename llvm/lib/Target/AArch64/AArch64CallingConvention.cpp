@@ -260,113 +260,116 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
                                        CCValAssign::LocInfo LocInfo,
                                        ISD::ArgFlagsTy ArgFlags,
                                        CCState &State) {
+  // Check if we have a custom register mapping
   MachineFunction &MF = State.getMachineFunction();
   Function &F = MF.getFunction();
-  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
-  if (!Attr.isValid())
+
+  if (!F.hasFnAttribute("aarch64-custom-reg-map"))
     return true;
+
+  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
   StringRef Mapping = Attr.getValueAsString();
+
+  if (Mapping.empty())
+    return true;
+
+  // Parse the attribute: "RetReg: Arg1Reg, Arg2Reg, ..."
   SmallVector<unsigned, 4> ArgRegs;
   unsigned RetReg;
-
   if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
     return true;
-  // Track which registers we've seen
-  SmallSet<unsigned, 4> UsedRegs;
 
-  for (unsigned i = 0; i < ArgRegs.size(); i++) {
-    // Only allocate if we haven't seen this register before
-    if (!UsedRegs.count(ArgRegs[i])) {
-      if (MCRegister Reg = State.AllocateReg(ArgRegs[i])) {
-        UsedRegs.insert(ArgRegs[i]);
-      } else {
-        return true; // Allocation failed
-      }
+  // Make sure we have enough registers specified
+  if (ValNo >= ArgRegs.size())
+    return true;
+
+  // Get the register for this argument
+  unsigned TargetReg = ArgRegs[ValNo];
+
+  // Handle GPR registers
+  if (TargetReg >= AArch64::X0 && TargetReg <= AArch64::X28) {
+    if (LocVT != MVT::i64 && LocVT != MVT::i32) {
+      // Type mismatch, fall back to default behavior
+      return true;
     }
 
-    // Always add location mapping, even for repeated registers
-    State.addLoc(CCValAssign::getReg(i, ValVT, ArgRegs[i], LocVT, LocInfo));
+    if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
   }
-  return false;
+
+  // Handle SIMD/FP registers
+  if (TargetReg >= AArch64::Q0 && TargetReg <= AArch64::Q31) {
+    if (!LocVT.isVector() && !LocVT.isFloatingPoint()) {
+      // Type mismatch, fall back to default behavior
+      return true;
+    }
+
+    if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  // If allocation failed, fall back to stack
+  if (LocVT.getSizeInBits() <= 64) {
+    int64_t Offset = State.AllocateStack(8, Align(8));
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+    return false;
+  } else {
+    int64_t Offset = State.AllocateStack(16, Align(16));
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+    return false;
+  }
 }
 
 bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
                                           CCValAssign::LocInfo LocInfo,
                                           ISD::ArgFlagsTy ArgFlags,
                                           CCState &State) {
+  // Check if we have a custom register mapping
   MachineFunction &MF = State.getMachineFunction();
   Function &F = MF.getFunction();
-  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
-  if (!Attr.isValid())
+
+  if (!F.hasFnAttribute("aarch64-custom-reg-map"))
     return true;
+
+  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
   StringRef Mapping = Attr.getValueAsString();
+
+  if (Mapping.empty())
+    return true;
+
+  // Parse the attribute: "RetReg: Arg1Reg, Arg2Reg, ..."
   SmallVector<unsigned, 4> ArgRegs;
   unsigned RetReg;
-
   if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
     return true;
 
-  if (MCRegister Reg = State.AllocateReg(RetReg)) {
-    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-    return false;
-  }
-  return true;
-}
-
-bool llvm::CC_AArch64_CustomVRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
-                                        CCValAssign::LocInfo LocInfo,
-                                        ISD::ArgFlagsTy ArgFlags,
-                                        CCState &State) {
-  MachineFunction &MF = State.getMachineFunction();
-  Function &F = MF.getFunction();
-  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
-  if (!Attr.isValid())
-    return true;
-  StringRef Mapping = Attr.getValueAsString();
-  SmallVector<unsigned, 4> ArgRegs;
-  unsigned RetReg;
-
-  if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
-    return true;
-  // Track which registers we've seen
-  SmallSet<unsigned, 4> UsedRegs;
-
-  for (unsigned i = 0; i < ArgRegs.size(); i++) {
-    // Only allocate if we haven't seen this register before
-    if (!UsedRegs.count(ArgRegs[i])) {
-      if (MCRegister Reg = State.AllocateReg(ArgRegs[i])) {
-        UsedRegs.insert(ArgRegs[i]);
-      } else {
-        return true; // Allocation failed
-      }
+  // Handle GPR registers
+  if (RetReg >= AArch64::X0 && RetReg <= AArch64::X28) {
+    if (LocVT != MVT::i64 && LocVT != MVT::i32) {
+      // Type mismatch, fall back to default behavior
+      return true;
     }
-
-    // Always add location mapping, even for repeated registers
-    State.addLoc(CCValAssign::getReg(i, ValVT, ArgRegs[i], LocVT, LocInfo));
   }
-  return false;
-}
-bool llvm::CC_AArch64_CustomVRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
-                                           CCValAssign::LocInfo LocInfo,
-                                           ISD::ArgFlagsTy ArgFlags,
-                                           CCState &State) {
-  MachineFunction &MF = State.getMachineFunction();
-  Function &F = MF.getFunction();
-  const auto Attr = F.getFnAttribute("aarch64-custom-reg-map");
-  if (!Attr.isValid())
-    return true;
-  StringRef Mapping = Attr.getValueAsString();
-  SmallVector<unsigned, 4> ArgRegs;
-  unsigned RetReg;
 
-  if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
-    return true;
+  // Handle SIMD/FP registers
+  if (RetReg >= AArch64::Q0 && RetReg <= AArch64::Q31) {
+    if (!LocVT.isVector() && !LocVT.isFloatingPoint()) {
+      // Type mismatch, fall back to default behavior
+      return true;
+    }
+  }
 
+  // Try to allocate the return register
   if (MCRegister Reg = State.AllocateReg(RetReg)) {
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     return false;
   }
-  return true;
+
+  return true; // Fall back to default behavior
 }
 
 // TableGen provides definitions of the calling convention analysis entry
