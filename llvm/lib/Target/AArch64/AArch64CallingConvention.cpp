@@ -311,24 +311,13 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     if (MCRegister Reg = State.AllocateReg(TargetReg)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-      return false;
     } else {
       State.addLoc(
           CCValAssign::getReg(ValNo, ValVT, ArgRegs[ValNo], LocVT, LocInfo));
     }
+    return false;
   }
-  return false;
-
-  // // If allocation failed, fall back to stack
-  // if (LocVT.getSizeInBits() <= 64) {
-  //   int64_t Offset = State.AllocateStack(8, Align(8));
-  //   State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-  //   return false;
-  // } else {
-  //   int64_t Offset = State.AllocateStack(16, Align(16));
-  //   State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-  //   return false;
-  // }
+  return true;
 }
 
 bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
