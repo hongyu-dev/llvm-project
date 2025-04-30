@@ -148,10 +148,6 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         return CSR_AArch64_Custom_X24_SCS_SaveList;
       case AArch64::X25:
         return CSR_AArch64_Custom_X25_SCS_SaveList;
-      case AArch64::X27:
-        return CSR_AArch64_Custom_X27_SCS_SaveList;
-      case AArch64::X28:
-        return CSR_AArch64_Custom_X28_SCS_SaveList;
       case AArch64::Q0:
         return CSR_AArch64_Custom_Q0_SCS_SaveList;
       case AArch64::Q1:
