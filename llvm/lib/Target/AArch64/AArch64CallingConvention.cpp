@@ -256,6 +256,61 @@ static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
   return true;
 }
 
+static bool isCalleeSaved(const unsigned Reg) {
+  switch (Reg) {
+  case AArch64::X0:
+  case AArch64::X1:
+  case AArch64::X2:
+  case AArch64::X3:
+  case AArch64::X4:
+  case AArch64::X5:
+  case AArch64::X9:
+  case AArch64::X10:
+  case AArch64::X11:
+  case AArch64::X14:
+  case AArch64::X15:
+  case AArch64::X19:
+  case AArch64::X20:
+  case AArch64::X21:
+  case AArch64::X22:
+  case AArch64::X23:
+  case AArch64::X24:
+  case AArch64::X25:
+  case AArch64::X26:
+  case AArch64::X27:
+  case AArch64::X28:
+  case AArch64::FP:
+  case AArch64::LR:
+  case AArch64::Q0:
+  case AArch64::Q1:
+  case AArch64::Q2:
+  case AArch64::Q3:
+  case AArch64::Q4:
+  case AArch64::Q5:
+  case AArch64::Q6:
+  case AArch64::D7:
+  case AArch64::D8:
+  case AArch64::D9:
+  case AArch64::D10:
+  case AArch64::D11:
+  case AArch64::D12:
+  case AArch64::D13:
+  case AArch64::D14:
+  case AArch64::D15:
+  case AArch64::Q16:
+  case AArch64::Q17:
+  case AArch64::Q18:
+  case AArch64::Q19:
+  case AArch64::Q20:
+  case AArch64::Q21:
+  case AArch64::Q22:
+  case AArch64::Q23:
+    return true;
+  default:
+    return false;
+  };
+}
+
 bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
                                        CCValAssign::LocInfo LocInfo,
                                        ISD::ArgFlagsTy ArgFlags,
@@ -294,6 +349,9 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
 
     if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+      if (isCalleeSaved(TargetReg)) {
+        MF.front().addLiveIn(TargetReg);
+      }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
       State.addLoc(
@@ -310,6 +368,9 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
 
     if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+      if (isCalleeSaved(TargetReg)) {
+        MF.front().addLiveIn(TargetReg);
+      }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
       State.addLoc(
