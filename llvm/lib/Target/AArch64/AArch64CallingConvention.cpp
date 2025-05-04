@@ -349,7 +349,7 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
 
     if (MCRegister Reg = State.AllocateReg(TargetReg)) {
-      if (isCalleeSaved(TargetReg)) {
+      if (RetReg != TargetReg && isCalleeSaved(TargetReg)) {
         MF.front().addLiveIn(TargetReg);
       }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -368,7 +368,7 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
 
     if (MCRegister Reg = State.AllocateReg(TargetReg)) {
-      if (isCalleeSaved(TargetReg)) {
+      if (RetReg != TargetReg && isCalleeSaved(TargetReg)) {
         MF.front().addLiveIn(TargetReg);
       }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
