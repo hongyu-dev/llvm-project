@@ -264,6 +264,7 @@ static bool isCalleeSaved(const unsigned Reg) {
   case AArch64::X3:
   case AArch64::X4:
   case AArch64::X5:
+  case AArch64::X6:
   case AArch64::X9:
   case AArch64::X10:
   case AArch64::X11:
