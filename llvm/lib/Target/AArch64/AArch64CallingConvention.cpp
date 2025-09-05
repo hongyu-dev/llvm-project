@@ -235,15 +235,25 @@ static bool parseAArch64Register(StringRef RegStr, unsigned &RegNum) {
   return false;
 }
 
-static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
+static bool parseRegisterMapping(StringRef Mapping,
+                                 SmallVectorImpl<unsigned> &RetRegs,
                                  SmallVectorImpl<unsigned> &ArgRegs) {
   auto Parts = Mapping.split(':');
   if (Parts.first.empty() || Parts.second.empty())
     return false;
 
-  if (!parseAArch64Register(Parts.first.trim(), RetReg))
-    return false;
+  // Parse return registers (comma-separated before the colon)
+  SmallVector<StringRef, 4> RetStrs;
+  Parts.first.split(RetStrs, ',');
 
+  for (auto RetStr : RetStrs) {
+    unsigned RetReg;
+    if (!parseAArch64Register(RetStr.trim(), RetReg))
+      return false;
+    RetRegs.push_back(RetReg);
+  }
+
+  // Parse argument registers (comma-separated after the colon)
   SmallVector<StringRef, 4> ArgStrs;
   Parts.second.split(ArgStrs, ',');
 
@@ -253,6 +263,7 @@ static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
       return false;
     ArgRegs.push_back(ArgReg);
   }
+
   return true;
 }
 
@@ -329,10 +340,10 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (Mapping.empty())
     return true;
 
-  // Parse the attribute: "RetReg: Arg1Reg, Arg2Reg, ..."
+  // Parse the attribute: "RetReg1, RetReg2, ...: Arg1Reg, Arg2Reg, ..."
+  SmallVector<unsigned, 4> RetRegs;
   SmallVector<unsigned, 4> ArgRegs;
-  unsigned RetReg;
-  if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
+  if (!parseRegisterMapping(Mapping, RetRegs, ArgRegs))
     return true;
 
   // Make sure we have enough registers specified
@@ -342,6 +353,15 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
   // Get the register for this argument
   unsigned TargetReg = ArgRegs[ValNo];
 
+  // Check if this argument register is also used as a return register
+  bool isAlsoReturnReg = false;
+  for (unsigned RetReg : RetRegs) {
+    if (RetReg == TargetReg) {
+      isAlsoReturnReg = true;
+      break;
+    }
+  }
+
   // Handle GPR registers
   if (TargetReg >= AArch64::X0 && TargetReg <= AArch64::X28) {
     if (LocVT != MVT::i64 && LocVT != MVT::i32) {
@@ -350,13 +370,15 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
 
     if (MCRegister Reg = State.AllocateReg(TargetReg)) {
-      if (RetReg != TargetReg && isCalleeSaved(TargetReg)) {
+      // Add to LiveIn if it's callee-saved and not also a return register
+      if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
         MF.front().addLiveIn(TargetReg);
       }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
+      // Register already allocated, still create the location
       State.addLoc(
-          CCValAssign::getReg(ValNo, ValVT, ArgRegs[ValNo], LocVT, LocInfo));
+          CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
     }
     return false;
   }
@@ -369,17 +391,39 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
 
     if (MCRegister Reg = State.AllocateReg(TargetReg)) {
-      if (RetReg != TargetReg && isCalleeSaved(TargetReg)) {
+      // Add to LiveIn if it's callee-saved and not also a return register
+      if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
+        MF.front().addLiveIn(TargetReg);
+      }
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    } else {
+      // Register already allocated, still create the location
+      State.addLoc(
+          CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
+    }
+    return false;
+  }
+
+  // Handle other register types if needed (D registers, S registers, etc.)
+  if ((TargetReg >= AArch64::D0 && TargetReg <= AArch64::D31) ||
+      (TargetReg >= AArch64::S0 && TargetReg <= AArch64::S31)) {
+    if (!LocVT.isFloatingPoint()) {
+      return true;
+    }
+
+    if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+      if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
         MF.front().addLiveIn(TargetReg);
       }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
       State.addLoc(
-          CCValAssign::getReg(ValNo, ValVT, ArgRegs[ValNo], LocVT, LocInfo));
+          CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
     }
     return false;
   }
-  return true;
+
+  return true; // Unknown register type, fall back to default
 }
 
 bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
@@ -400,11 +444,15 @@ bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     return true;
 
   // Parse the attribute: "RetReg: Arg1Reg, Arg2Reg, ..."
+  SmallVector<unsigned, 4> RetRegs;
   SmallVector<unsigned, 4> ArgRegs;
-  unsigned RetReg;
-  if (!parseRegisterMapping(Mapping, RetReg, ArgRegs))
+  if (!parseRegisterMapping(Mapping, RetRegs, ArgRegs))
     return true;
 
+  if (ValNo >= RetRegs.size())
+    return true;
+
+  unsigned RetReg = RetRegs[ValNo];
   // Handle GPR registers
   if (RetReg >= AArch64::X0 && RetReg <= AArch64::X28) {
     if (LocVT != MVT::i64 && LocVT != MVT::i32) {

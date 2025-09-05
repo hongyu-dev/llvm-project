@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -29,6 +30,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -53,15 +55,25 @@ static bool parseAArch64Register(StringRef RegStr, unsigned &RegNum) {
   return false;
 }
 
-static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
+static bool parseRegisterMapping(StringRef Mapping,
+                                 SmallVectorImpl<unsigned> &RetRegs,
                                  SmallVectorImpl<unsigned> &ArgRegs) {
   auto Parts = Mapping.split(':');
   if (Parts.first.empty() || Parts.second.empty())
     return false;
 
-  if (!parseAArch64Register(Parts.first.trim(), RetReg))
-    return false;
+  // Parse return registers (comma-separated before the colon)
+  SmallVector<StringRef, 4> RetStrs;
+  Parts.first.split(RetStrs, ',');
 
+  for (auto RetStr : RetStrs) {
+    unsigned RetReg;
+    if (!parseAArch64Register(RetStr.trim(), RetReg))
+      return false;
+    RetRegs.push_back(RetReg);
+  }
+
+  // Parse argument registers (comma-separated after the colon)
   SmallVector<StringRef, 4> ArgStrs;
   Parts.second.split(ArgStrs, ',');
 
@@ -71,6 +83,7 @@ static bool parseRegisterMapping(StringRef Mapping, unsigned &RetReg,
       return false;
     ArgRegs.push_back(ArgReg);
   }
+
   return true;
 }
 
@@ -107,84 +120,166 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
 
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_Custom_Reg) {
+    auto CacheIt = DynamicCSRList.find(MF);
+    if (CacheIt != DynamicCSRList.end()) {
+      return CacheIt->second.get();
+    }
+
     const auto Attr =
         MF->getFunction().getFnAttribute("aarch64-custom-reg-map");
     StringRef Mapping = Attr.getValueAsString();
     SmallVector<unsigned, 4> ArgRegs;
-    unsigned RetReg;
-    if (parseRegisterMapping(Mapping, RetReg, ArgRegs)) {
-      switch (RetReg) {
+    SmallVector<unsigned, 4> RetRegs;
+    if (parseRegisterMapping(Mapping, RetRegs, ArgRegs) && !RetRegs.empty()) {
+      const MCPhysReg *BaseList = nullptr;
+      switch (RetRegs[0]) {
       case AArch64::X0:
-        return CSR_AArch64_Custom_X0_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X0_SCS_SaveList;
+        break;
       case AArch64::X1:
-        return CSR_AArch64_Custom_X1_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X1_SCS_SaveList;
+        break;
       case AArch64::X2:
-        return CSR_AArch64_Custom_X2_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X2_SCS_SaveList;
+        break;
       case AArch64::X3:
-        return CSR_AArch64_Custom_X3_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X3_SCS_SaveList;
+        break;
       case AArch64::X4:
-        return CSR_AArch64_Custom_X4_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X4_SCS_SaveList;
+        break;
       case AArch64::X5:
-        return CSR_AArch64_Custom_X5_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X5_SCS_SaveList;
+        break;
       case AArch64::X6:
-        return CSR_AArch64_Custom_X6_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X6_SCS_SaveList;
+        break;
       case AArch64::X9:
-        return CSR_AArch64_Custom_X9_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X9_SCS_SaveList;
+        break;
       case AArch64::X10:
-        return CSR_AArch64_Custom_X10_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X10_SCS_SaveList;
+        break;
       case AArch64::X11:
-        return CSR_AArch64_Custom_X11_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X11_SCS_SaveList;
+        break;
       case AArch64::X14:
-        return CSR_AArch64_Custom_X14_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X14_SCS_SaveList;
+        break;
       case AArch64::X19:
-        return CSR_AArch64_Custom_X19_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X19_SCS_SaveList;
+        break;
       case AArch64::X20:
-        return CSR_AArch64_Custom_X20_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X20_SCS_SaveList;
+        break;
       case AArch64::X21:
-        return CSR_AArch64_Custom_X21_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X21_SCS_SaveList;
+        break;
       case AArch64::X22:
-        return CSR_AArch64_Custom_X22_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X22_SCS_SaveList;
+        break;
       case AArch64::X23:
-        return CSR_AArch64_Custom_X23_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X23_SCS_SaveList;
+        break;
       case AArch64::X24:
-        return CSR_AArch64_Custom_X24_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X24_SCS_SaveList;
+        break;
       case AArch64::X25:
-        return CSR_AArch64_Custom_X25_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_X25_SCS_SaveList;
+        break;
       case AArch64::Q0:
-        return CSR_AArch64_Custom_Q0_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q0_SCS_SaveList;
+        break;
       case AArch64::Q1:
-        return CSR_AArch64_Custom_Q1_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q1_SCS_SaveList;
+        break;
       case AArch64::Q2:
-        return CSR_AArch64_Custom_Q2_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q2_SCS_SaveList;
+        break;
       case AArch64::Q3:
-        return CSR_AArch64_Custom_Q3_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q3_SCS_SaveList;
+        break;
       case AArch64::Q4:
-        return CSR_AArch64_Custom_Q4_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q4_SCS_SaveList;
+        break;
       case AArch64::Q5:
-        return CSR_AArch64_Custom_Q5_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q5_SCS_SaveList;
+        break;
       case AArch64::Q6:
-        return CSR_AArch64_Custom_Q6_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q6_SCS_SaveList;
+        break;
       case AArch64::Q7:
-        return CSR_AArch64_Custom_Q7_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q7_SCS_SaveList;
+        break;
       case AArch64::Q16:
-        return CSR_AArch64_Custom_Q16_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q16_SCS_SaveList;
+        break;
       case AArch64::Q17:
-        return CSR_AArch64_Custom_Q17_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q17_SCS_SaveList;
+        break;
       case AArch64::Q18:
-        return CSR_AArch64_Custom_Q18_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q18_SCS_SaveList;
+        break;
       case AArch64::Q19:
-        return CSR_AArch64_Custom_Q19_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q19_SCS_SaveList;
+        break;
       case AArch64::Q20:
-        return CSR_AArch64_Custom_Q20_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q20_SCS_SaveList;
+        break;
       case AArch64::Q21:
-        return CSR_AArch64_Custom_Q21_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q21_SCS_SaveList;
+        break;
       case AArch64::Q22:
-        return CSR_AArch64_Custom_Q22_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q22_SCS_SaveList;
+        break;
       case AArch64::Q23:
-        return CSR_AArch64_Custom_Q23_SCS_SaveList;
+        BaseList = CSR_AArch64_Custom_Q23_SCS_SaveList;
+        break;
       default:
-        return CSR_AArch64_NoRegs_SaveList;
+        BaseList = CSR_AArch64_NoRegs_SaveList;
+        break;
       }
+      if (RetRegs.size() == 1)
+        return BaseList;
+
+      // Build set of additional return registers to exclude
+      SmallSet<unsigned, 8> ExcludeSet;
+      for (size_t i = 1; i < RetRegs.size(); ++i) {
+        unsigned Reg = RetRegs[i];
+        // Check if this register is actually in the base list
+        for (size_t j = 0; BaseList[j] != 0; ++j) {
+          if (BaseList[j] == Reg) {
+            ExcludeSet.insert(Reg);
+            break;
+          }
+        }
+      }
+
+      // Count base list size
+      size_t BaseCount = 0;
+      while (BaseList[BaseCount] != 0) {
+        BaseCount++;
+      }
+
+      // Allocate and build filtered list
+      auto FilteredList = std::make_unique<MCPhysReg[]>(BaseCount + 1);
+
+      size_t OutIdx = 0;
+      for (size_t i = 0; i < BaseCount; ++i) {
+        if (!ExcludeSet.count(BaseList[i])) {
+          FilteredList[OutIdx++] = BaseList[i];
+        }
+      }
+      FilteredList[OutIdx] = 0; // Terminator
+
+      MCPhysReg *Result = FilteredList.get();
+
+      // Insert into mutable cache using operator[]
+      const_cast<
+          DenseMap<const MachineFunction *, std::unique_ptr<MCPhysReg[]>> &>(
+          DynamicCSRList)[MF] = std::move(FilteredList);
+
+      return Result;
     }
     return CSR_AArch64_NoRegs_SaveList;
   }

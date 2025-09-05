@@ -26,6 +26,10 @@ class Triple;
 class AArch64RegisterInfo final : public AArch64GenRegisterInfo {
   const Triple &TT;
 
+  DenseMap<const MachineFunction *, std::unique_ptr<MCPhysReg[]>>
+      DynamicCSRList;
+  DenseMap<const MachineFunction *, std::unique_ptr<uint32_t[]>> DynamicCSRMask;
+
 public:
   AArch64RegisterInfo(const Triple &TT);
 
