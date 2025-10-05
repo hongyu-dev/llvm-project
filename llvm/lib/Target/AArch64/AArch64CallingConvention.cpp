@@ -362,6 +362,9 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
+  // Check if this register was already used by a previous argument
+  bool alreadyAllocated = State.isAllocated(TargetReg);
+
   // Handle GPR registers
   if (TargetReg >= AArch64::X0 && TargetReg <= AArch64::X28) {
     if (LocVT != MVT::i64 && LocVT != MVT::i32) {
@@ -369,16 +372,22 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
       return true;
     }
 
-    if (MCRegister Reg = State.AllocateReg(TargetReg)) {
-      // Add to LiveIn if it's callee-saved and not also a return register
-      if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
-        MF.front().addLiveIn(TargetReg);
+    if (!alreadyAllocated) {
+      // First use of this register - allocate it
+      if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+        // Add to LiveIn if it's callee-saved and not also a return register
+        if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
+          MF.front().addLiveIn(TargetReg);
+        }
+        State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      } else {
+        // Allocation failed unexpectedly
+        return true;
       }
-      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
-      // Register already allocated, still create the location
-      State.addLoc(
-          CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
+      // Register already allocated (same register used for multiple args)
+      // Still create the location but don't try to allocate again
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
     }
     return false;
   }
@@ -390,16 +399,17 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
       return true;
     }
 
-    if (MCRegister Reg = State.AllocateReg(TargetReg)) {
-      // Add to LiveIn if it's callee-saved and not also a return register
-      if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
-        MF.front().addLiveIn(TargetReg);
+    if (!alreadyAllocated) {
+      if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+        if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
+          MF.front().addLiveIn(TargetReg);
+        }
+        State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      } else {
+        return true;
       }
-      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
-      // Register already allocated, still create the location
-      State.addLoc(
-          CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
     }
     return false;
   }
@@ -411,14 +421,17 @@ bool llvm::CC_AArch64_CustomRegHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
       return true;
     }
 
-    if (MCRegister Reg = State.AllocateReg(TargetReg)) {
-      if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
-        MF.front().addLiveIn(TargetReg);
+    if (!alreadyAllocated) {
+      if (MCRegister Reg = State.AllocateReg(TargetReg)) {
+        if (!isAlsoReturnReg && isCalleeSaved(TargetReg)) {
+          MF.front().addLiveIn(TargetReg);
+        }
+        State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      } else {
+        return true;
       }
-      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     } else {
-      State.addLoc(
-          CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, TargetReg, LocVT, LocInfo));
     }
     return false;
   }
@@ -443,7 +456,7 @@ bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (Mapping.empty())
     return true;
 
-  // Parse the attribute: "RetReg: Arg1Reg, Arg2Reg, ..."
+  // Parse the attribute: "RetReg1, RetReg2, ...: Arg1Reg, Arg2Reg, ..."
   SmallVector<unsigned, 4> RetRegs;
   SmallVector<unsigned, 4> ArgRegs;
   if (!parseRegisterMapping(Mapping, RetRegs, ArgRegs))
@@ -453,6 +466,10 @@ bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
     return true;
 
   unsigned RetReg = RetRegs[ValNo];
+  
+  // Check if this register was already used by a previous return value
+  bool alreadyAllocated = State.isAllocated(RetReg);
+  
   // Handle GPR registers
   if (RetReg >= AArch64::X0 && RetReg <= AArch64::X28) {
     if (LocVT != MVT::i64 && LocVT != MVT::i32) {
@@ -460,22 +477,39 @@ bool llvm::CC_AArch64_CustomRegRetHandler(unsigned ValNo, MVT ValVT, MVT LocVT,
       return true;
     }
   }
-
   // Handle SIMD/FP registers
-  if (RetReg >= AArch64::Q0 && RetReg <= AArch64::Q31) {
+  else if (RetReg >= AArch64::Q0 && RetReg <= AArch64::Q31) {
     if (!LocVT.isVector() && !LocVT.isFloatingPoint()) {
       // Type mismatch, fall back to default behavior
       return true;
     }
   }
-
-  // Try to allocate the return register
-  if (MCRegister Reg = State.AllocateReg(RetReg)) {
-    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-    return false;
+  // Handle D/S registers
+  else if ((RetReg >= AArch64::D0 && RetReg <= AArch64::D31) ||
+           (RetReg >= AArch64::S0 && RetReg <= AArch64::S31)) {
+    if (!LocVT.isFloatingPoint()) {
+      return true;
+    }
+  }
+  else {
+    // Unknown register type
+    return true;
   }
 
-  return true; // Fall back to default behavior
+  // Try to allocate the return register if not already allocated
+  if (!alreadyAllocated) {
+    if (MCRegister Reg = State.AllocateReg(RetReg)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+    // Allocation failed
+    return true;
+  } else {
+    // Register already allocated (same register used for multiple returns)
+    // Still create the location but don't try to allocate again
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, RetReg, LocVT, LocInfo));
+    return false;
+  }
 }
 
 // TableGen provides definitions of the calling convention analysis entry
