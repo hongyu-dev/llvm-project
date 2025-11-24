@@ -772,9 +772,6 @@ def CSR_AArch64_SVE_AAPCS_SCS
 def CSR_AArch64_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;
 
-// Handle 64-bit integers in X registers
-// Handle 128-bit vectors in Q registers
-// Stack fallbacks if custom handler doesn't assign a register
 def CC_AARCH64_CustomReg : CallingConv<[
   CCIfType<[i64], CCCustom<"CC_AArch64_CustomRegHandler">>,
   
@@ -793,6 +790,13 @@ def RetCC_AArch64_CustomReg : CallingConv<[
   
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16, v8bf16], 
            CCCustom<"CC_AArch64_CustomRegRetHandler">>
+]>;
+
+def CC_AArch64_Custom_Reg : CallingConv<[
+  CCDelegateTo<CC_AARCH64_CustomReg>
+]>;
+def RetCC_AArch64_Custom_Reg : CallingConv<[
+  CCDelegateTo<RetCC_AArch64_CustomReg>
 ]>;
 
 def CSR_AArch64_Custom_X0_SCS
