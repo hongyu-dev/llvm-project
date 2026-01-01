@@ -1889,6 +1889,12 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // function, including the funclet.
   int64_t NumBytes =
       IsFunclet ? getWinEHFuncletFrameSize(MF) : MFI.getStackSize();
+
+  if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
+      NumBytes > 0) {
+    NumBytes += 128;
+  }
+
   if (!AFI->hasStackFrame() && !windowsRequiresStackProbe(MF, NumBytes)) {
     assert(!HasFP && "unexpected function without stack frame but with FP");
     assert(!SVEStackSize &&
@@ -2321,6 +2327,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
                                : MFI.getStackSize();
+
+  if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
+      NumBytes > 0) {
+    NumBytes += 128;
+  }
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
