@@ -1881,6 +1881,17 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
 
+  // Reserve x86 red-zone padding for custom-reg-map tiles. This sub MUST
+  // happen BEFORE any CSR save instruction so the saves land below the
+  // padding, outside the caller's x86 red zone (which lives in
+  // [old_SP - 128, old_SP)). The matching add lives at the end of the
+  // epilogue.
+  if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
+      MFI.getStackSize() > 0) {
+    emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
+                    StackOffset::getFixed(-128), TII, MachineInstr::FrameSetup);
+  }
+
   // getStackSize() includes all the locals in its size calculation. We don't
   // include these locals when computing the stack size of a funclet, as they
   // are allocated in the parent's stack frame and accessed via the frame
@@ -1890,10 +1901,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   int64_t NumBytes =
       IsFunclet ? getWinEHFuncletFrameSize(MF) : MFI.getStackSize();
 
-  if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
-      NumBytes > 0) {
-    NumBytes += 128;
-  }
+  // if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
+  //     NumBytes > 0) {
+  //   NumBytes += 128;
+  // }
 
   if (!AFI->hasStackFrame() && !windowsRequiresStackProbe(MF, NumBytes)) {
     assert(!HasFP && "unexpected function without stack frame but with FP");
@@ -2325,13 +2336,22 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     }
   });
 
+  auto RestoreRedZonePadding = make_scope_exit([&]() {
+    if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
+        MFI.getStackSize() > 0) {
+      emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP,
+                      AArch64::SP, StackOffset::getFixed(128), TII,
+                      MachineInstr::FrameDestroy);
+    }
+  });
+
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
                                : MFI.getStackSize();
 
-  if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
-      NumBytes > 0) {
-    NumBytes += 128;
-  }
+  // if (MF.getFunction().hasFnAttribute("aarch64-custom-reg-map") &&
+  //     NumBytes > 0) {
+  //   NumBytes += 128;
+  // }
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
