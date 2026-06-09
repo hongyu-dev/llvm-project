@@ -166,6 +166,9 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       case AArch64::X14:
         BaseList = CSR_AArch64_Custom_X14_SCS_SaveList;
         break;
+      case AArch64::X15:
+        BaseList = CSR_AArch64_Custom_X15_SCS_SaveList;
+        break;
       case AArch64::X19:
         BaseList = CSR_AArch64_Custom_X19_SCS_SaveList;
         break;
@@ -183,9 +186,6 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         break;
       case AArch64::X24:
         BaseList = CSR_AArch64_Custom_X24_SCS_SaveList;
-        break;
-      case AArch64::X25:
-        BaseList = CSR_AArch64_Custom_X25_SCS_SaveList;
         break;
       case AArch64::Q0:
         BaseList = CSR_AArch64_Custom_Q0_SCS_SaveList;
